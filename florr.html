@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Advanced Audio‑Reactive 3D Art (Enhanced)</title>
+  <style>
+    /* === Base Styles === */
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+      font-family: sans-serif;
+      user-select: none;  /* prevent text selection when dragging */
+    }
+    #menu {
+      position: absolute;
+      top: 10px; left: 10px;
+      background: rgba(255,255,255,0.85);
+      padding: 12px;
+      border-radius: 8px;
+      max-height: 90vh;
+      overflow-y: auto;
+      z-index: 100;
+      width: 220px;
+    }
+    #menu label, #menu button, #menu select, #menu input {
+      display: block;
+      margin: 6px 0;
+      font-size: 13px;
+    }
+    #menu input[type="range"], #menu select {
+      width: 100%;
+    }
+    #menu button {
+      cursor: pointer;
+      padding: 6px;
+    }
+    /* Canvases for graphs */
+    #waveformCanvas, #volumeCanvas {
+      position: absolute;
+      right: 10px;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid #fff;
+      z-index: 100;
+    }
+    #waveformCanvas { top: 10px; }
+    #volumeCanvas   { top: 140px; }
+    /* Jumpscare Overlay */
+    #jumpscareOverlay {
+      display: none;
+      position: fixed;
+      top:0; left:0;
+      width:100%; height:100%;
+      background: black;
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      font-size: 96px;
+      color: red;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <!-- === Controls Panel === -->
+  <div id="menu">
+    <label>Sensitivity:
+      <input id="sensitivity" type="range" min="0.1" max="5" step="0.1" value="1">
+    </label>
+    <label>Deformation Strength:
+      <input id="deformation" type="range" min="0" max="5" step="0.1" value="1">
+    </label>
+    <label>Max Displacement:
+      <input id="maxDisp" type="range" min="0.1" max="2" step="0.1" value="0.3">
+    </label>
+    <label>Rotation Speed:
+      <input id="rotationSpeed" type="range" min="0" max="2" step="0.01" value="0.5">
+    </label>
+
+    <label>Color Flow Speed:
+      <input id="colorFlowSpeed" type="range" min="0" max="10" step="0.1" value="1">
+    </label>
+    <label>Color Flow Intensity:
+      <input id="colorFlowIntensity" type="range" min="0" max="2" step="0.1" value="0.5">
+    </label>
+    <label>Color Flow Scale:
+      <input id="colorFlowScale" type="range" min="0" max="3" step="0.1" value="1">
+    </label>
+
+    <label>Lighting Mode:
+      <select id="lightingMode">
+        <option value="0">Basic</option>
+        <option value="1">Lambert</option>
+        <option value="2">Phong</option>
+        <option value="3">Toon</option>
+        <option value="4">Rim Lighting</option>
+        <option value="5">Fresnel</option>
+        <option value="6">Ambient+Specular</option>
+        <option value="7">Glow</option>
+        <option value="8">Blinn‑Phong</option>
+        <option value="9">Cel Shading</option>
+        <option value="10">Subsurface Scatter</option>
+        <option value="11">Wireframe Glow</option>
+      </select>
+    </label>
+
+    <label>Color Preset:
+      <select id="colorPreset"></select>
+    </label>
+
+    <label>Shape:
+      <select id="shapeSelect">
+        <option value="sphere">Sphere</option>
+        <option value="cube">Cube</option>
+        <option value="torus">Torus</option>
+        <option value="tetrahedron">Tetrahedron</option>
+        <option value="dodecahedron">Dodecahedron</option>
+        <option value="cone">Cone</option>
+        <option value="cylinder">Cylinder</option>
+        <option value="octahedron">Octahedron</option>
+        <option value="icosahedron">Icosahedron</option>
+        <option value="ring">Ring</option>
+        <option value="torusKnot">TorusKnot</option>
+        <option value="plane">Plane</option>
+        <option value="capsule">Capsule</option>
+        <option value="star">Star</option>
+        <option value="pyramid">Pyramid</option>
+        <!-- New Additional Shapes -->
+        <option value="heart">Heart</option>
+        <option value="tube">Tube</option>
+        <option value="polyhedron">Polyhedron</option>
+        <option value="extrudeCross">Cross Extrude</option>
+        <option value="boxTessellated">Box (Tessellated)</option>
+      </select>
+    </label>
+
+    <label>Deformation Mode:
+      <select id="deformationMode">
+        <option value="wave">Wave</option>
+        <option value="ripple">Ripple</option>
+        <option value="twist">Twist</option>
+        <option value="grid">Grid</option>
+        <option value="spiral">Spiral</option>
+        <option value="pulse">Pulse</option>
+        <option value="vortex">Vortex</option>
+        <option value="wave2">Dual Wave</option>
+        <option value="checker">Checker</option>
+        <option value="radial">Radial</option>
+        <option value="noise">Noise Mix</option>
+        <option value="sineX">Sine-X</option>
+        <option value="sineY">Sine-Y</option>
+        <option value="sineZ">Sine-Z</option>
+        <option value="cosine">Cosine</option>
+        <option value="spiral2">Spiral 2</option>
+        <option value="starburst">Starburst</option>
+        <option value="blob">Blob</option>
+        <option value="checker2">Checker 2</option>
+        <option value="ripple2">Ripple 2</option>
+      </select>
+    </label>
+
+    <label>Physics Engine:
+      <select id="physicsEngine">
+        <option value="0">Simple</option>
+        <option value="1">Damped</option>
+        <option value="2">Noise‑Driven</option>
+        <option value="3">Spring</option>
+        <option value="4">Explosive</option>
+      </select>
+    </label>
+
+    <button id="recordButton">Start Recording</button>
+    <button id="clickMeButton">Enable Jumpscare</button>
+  </div>
+
+  <!-- === Waveform & Volume Graphs === -->
+  <canvas id="waveformCanvas" width="200" height="100"></canvas>
+  <canvas id="volumeCanvas" width="200" height="100"></canvas>
+
+  <!-- === Jumpscare Overlay === -->
+  <div id="jumpscareOverlay">BOO!</div>
+
+  <!-- === Three.js & Controls === -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/controls/OrbitControls.js"></script>
+
+  <!-- === Vertex Shader === -->
+  <script id="vertexShader" type="x-shader/x-vertex">
+    uniform float time;
+    uniform float audioLevel;
+    uniform float deformation;
+    uniform float maxDisp;
+    uniform int deformationMode;
+    uniform int physicsEngine;
+    varying vec3 vNormal;
+    varying vec3 vPosition;
+
+    // Simple pseudo‑noise
+    float pseudoNoise(vec3 p) {
+      return fract(sin(dot(p, vec3(12.9898,78.233,45.164))) * 43758.5453123);
+    }
+
+    void main() {
+      vec3 pos = position;
+      float wave = 0.0;
+
+      // === Deformation Mode Switch ===
+      if (deformationMode == 0) {            // Wave
+        wave = sin(pos.x * 10.0 + time * 2.0);
+      } else if (deformationMode == 1) {     // Ripple
+        wave = sin(length(pos.xy) * 12.0 - time * 3.0);
+      } else if (deformationMode == 2) {     // Twist
+        wave = sin(pos.x * 5.0 + pos.y * 5.0 + time * 4.0);
+      } else if (deformationMode == 3) {     // Grid
+        wave = sin(pos.x*10.0 + time) * cos(pos.y*10.0 + time);
+      } else if (deformationMode == 4) {     // Spiral
+        wave = sin(atan(pos.y, pos.x) * 6.0 + time * 2.0);
+      } else if (deformationMode == 5) {     // Pulse
+        wave = sin(time * 8.0) * 0.5;
+      } else if (deformationMode == 6) {     // Vortex
+        wave = cos(time * 3.0 + length(pos.zx)*5.0);
+      } else if (deformationMode == 7) {     // Dual Wave
+        wave = sin(pos.x * 8.0 + time * 2.0) * sin(pos.y * 8.0 + time * 2.0);
+      } else if (deformationMode == 8) {     // Checker
+        float cx = floor(mod(pos.x * 2.0 + time, 2.0));
+        float cy = floor(mod(pos.y * 2.0 + time, 2.0));
+        wave = (mod(cx+cy,2.0) == 0.0 ? 1.0 : -1.0);
+      } else if (deformationMode == 9) {     // Radial
+        wave = cos(length(pos.xyz) * 6.0 + time);
+      } else if (deformationMode == 10) {    // Noise Mix
+        wave = pseudoNoise(pos * 2.0 + time);
+      } else if (deformationMode == 11) {    // Sine-X
+        wave = sin(pos.x * 12.0 + time);
+      } else if (deformationMode == 12) {    // Sine-Y
+        wave = sin(pos.y * 12.0 + time);
+      } else if (deformationMode == 13) {    // Sine-Z
+        wave = sin(pos.z * 12.0 + time);
+      } else if (deformationMode == 14) {    // Cosine
+        wave = cos(pos.x * 8.0 + pos.y * 8.0 + time);
+      } else if (deformationMode == 15) {    // Spiral 2
+        wave = sin(length(pos.xy) * 4.0 + time * 5.0);
+      } else if (deformationMode == 16) {    // Starburst
+        wave = sin(dot(pos.xy, vec2(5.0, -5.0)) + time * 4.0);
+      } else if (deformationMode == 17) {    // Blob
+        wave = sin(pos.x * 7.0 + time) + cos(pos.y * 7.0 + time);
+      } else if (deformationMode == 18) {    // Checker 2
+        wave = cos(pos.x * 5.0) * sin(pos.y * 5.0 + time);
+      } else if (deformationMode == 19) {    // Ripple 2
+        wave = sin(length(pos.xz) * 10.0 - time * 2.0);
+      }
+
+      // === Physics Engine Switch (modifies wave behaviour) ===
+      if (physicsEngine == 1) {
+        // Damped: decay amplitude over time
+        wave *= exp(-time * 0.2);
+      } else if (physicsEngine == 2) {
+        // Noise‑Driven: add pseudo‑noise
+        wave += 0.5 * pseudoNoise(pos + time);
+      } else if (physicsEngine == 3) {
+        // Spring: harmonic oscillation
+        wave = sin(time * 10.0) * audioLevel;
+      } else if (physicsEngine == 4) {
+        // Explosive: big initial burst
+        wave *= (1.0 / (1.0 + time * 0.5));
+      }
+
+      // Compute displacement, clamp to avoid extreme distortions
+      float disp = clamp(audioLevel * deformation * wave, -maxDisp, maxDisp);
+
+      vec3 newPos = pos + normalize(normal) * disp;
+      vNormal   = normalize(normalMatrix * normal);
+      vPosition = (modelViewMatrix * vec4(newPos, 1.0)).xyz;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.0);
+    }
+  </script>
+
+  <!-- === Fragment Shader === -->
+  <script id="fragmentShader" type="x-shader/x-fragment">
+    uniform float time;
+    uniform int lightingMode;
+    uniform vec3 lightDirection;
+    uniform vec3 lightColor;
+    uniform vec3 ambientColor;
+    uniform vec3 baseColor;
+    uniform float audioLevel;
+    uniform float colorFlowSpeed;
+    uniform float colorFlowIntensity;
+    uniform float colorFlowScale;
+    varying vec3 vNormal;
+    varying vec3 vPosition;
+
+    void main() {
+      vec3 N = normalize(vNormal);
+      vec3 L = normalize(lightDirection);
+      vec3 V = normalize(-vPosition);
+      vec3 dynamic = colorFlowScale * colorFlowIntensity * vec3(
+        sin(time * colorFlowSpeed),
+        cos(time * colorFlowSpeed * 1.2),
+        sin(time * colorFlowSpeed * 0.7)
+      );
+      vec3 color = baseColor + dynamic;
+
+      if (lightingMode == 1) {
+        // Lambert
+        float lam = max(dot(N, L), 0.0);
+        color = (ambientColor + lightColor * lam) * color;
+      } else if (lightingMode == 2) {
+        // Phong
+        float lam = max(dot(N, L), 0.0);
+        vec3 R = reflect(-L, N);
+        float spec = pow(max(dot(V, R), 0.0), 32.0);
+        color = (ambientColor + lightColor * lam + lightColor * spec) * color;
+      } else if (lightingMode == 3) {
+        // Toon
+        float lam = max(dot(N, L), 0.0);
+        lam = floor(lam * 4.0) / 4.0;
+        color = (ambientColor + lightColor * lam) * color;
+      } else if (lightingMode == 4) {
+        // Rim
+        float rim = 1.0 - max(dot(N, V), 0.0);
+        rim = smoothstep(0.0, 1.0, rim);
+        color += rim * lightColor;
+      } else if (lightingMode == 5) {
+        // Fresnel
+        float fres = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+        color += fres * lightColor;
+      } else if (lightingMode == 6) {
+        // Ambient + Specular only
+        vec3 R = reflect(-L, N);
+        float spec = pow(max(dot(V, R), 0.0), 16.0);
+        color = baseColor + ambientColor + lightColor * spec + dynamic;
+      } else if (lightingMode == 7) {
+        // Glow
+        vec3 emis = lightColor * audioLevel;
+        color += emis;
+      } else if (lightingMode == 8) {
+        // Blinn‑Phong
+        vec3 H = normalize(L + V);
+        float spec = pow(max(dot(N, H), 0.0), 16.0);
+        float diff = max(dot(N, L), 0.0);
+        color = ambientColor*0.5 + diff*lightColor + spec*lightColor;
+        color *= baseColor + dynamic;
+      } else if (lightingMode == 9) {
+        // Cel Shading
+        float lam = max(dot(N, L), 0.0);
+        lam = lam > 0.5 ? 1.0 : (lam > 0.25 ? 0.5 : 0.2);
+        color = (ambientColor + lightColor * lam) * (baseColor + dynamic);
+      } else if (lightingMode == 10) {
+        // Subsurface Scattering (faux)
+        float scatter = dot(N, L) * 0.5 + 0.5;
+        color = baseColor * scatter + ambientColor * 0.3 + dynamic;
+      } else if (lightingMode == 11) {
+        // Wireframe Glow (overlay)
+        float edge = abs(dot(N, V));
+        if (edge < 0.1) {
+          color = vec3(1.0, 0.5, 0.0) * audioLevel;
+        } else {
+          color = baseColor*0.2 + dynamic*0.3;
+        }
+      }
+
+      gl_FragColor = vec4(color, 1.0);
+    }
+  </script>
+
+  <!-- === Main Script === -->
+  <script>
+    let scene, camera, renderer, blob, uniforms, controls;
+    let analyser, audioDataArray, audioLevel = 0;
+    let volumeHistory = [], maxHistory = 200;
+    let recording = false, audioStream = null, mediaRecorder, recordedChunks = [];
+    let jumpscareEnabled = false, jumpscareActive = false;
+
+    // Canvas contexts
+    const waveformCanvas = document.getElementById('waveformCanvas');
+    const waveformCtx    = waveformCanvas.getContext('2d');
+    const volumeCanvas   = document.getElementById('volumeCanvas');
+    const volumeCtx      = volumeCanvas.getContext('2d');
+
+    // Populate Color Presets
+    const colorPresets = [
+      {name:"Ocean Blue",value:0x1e90ff},{name:"Vivid Red",value:0xff0000},
+      {name:"Forest Green",value:0x228b22},{name:"Sunset Orange",value:0xff4500},
+      {name:"Deep Purple",value:0x8a2be2},{name:"Royal Blue",value:0x4169e1},
+      {name:"Magenta",value:0xff00ff},{name:"Cyan",value:0x00ffff},
+      {name:"Gold",value:0xffd700},{name:"Pink",value:0xff69b4},
+      {name:"Teal",value:0x008080},{name:"Lime",value:0x00ff00},
+      {name:"Coral",value:0xff7f50},{name:"Indigo",value:0x4b0082},
+      {name:"Turquoise",value:0x40e0d0},{name:"Olive",value:0x808000},
+      {name:"Maroon",value:0x800000},{name:"Navy",value:0x000080},
+      {name:"Brown",value:0x8b4513},{name:"Slate",value:0x708090},
+      {name:"Crimson",value:0xdc143c},{name:"Violet",value:0xee82ee}
+    ];
+    const colorPresetSelect = document.getElementById('colorPreset');
+    colorPresets.forEach(p=>{
+      let o=document.createElement('option');
+      o.value=p.value; o.text=p.name;
+      colorPresetSelect.appendChild(o);
+    });
+
+    // UI Elements
+    const elems = ['sensitivity','deformation','maxDisp','rotationSpeed',
+                   'colorFlowSpeed','colorFlowIntensity','colorFlowScale'];
+    const sliders = {};
+    elems.forEach(id => sliders[id] = document.getElementById(id));
+    const lightingModeSelect   = document.getElementById('lightingMode');
+    const shapeSelect          = document.getElementById('shapeSelect');
+    const deformationModeSelect= document.getElementById('deformationMode');
+    const physicsEngineSelect  = document.getElementById('physicsEngine');
+    const recordButton         = document.getElementById('recordButton');
+    const clickMeButton        = document.getElementById('clickMeButton');
+
+    init(); initAudio(); animate(); animateWaveform(); animateVolumeHistory();
+
+    function init() {
+      // Scene + Camera + Renderer
+      scene    = new THREE.Scene();
+      camera   = new THREE.PerspectiveCamera(45,window.innerWidth/window.innerHeight,0.1,1000);
+      camera.position.set(0,0,4);
+
+      renderer = new THREE.WebGLRenderer({antialias:true});
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth,window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      // OrbitControls for drag & zoom (centered)
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enablePan = false;
+      controls.enableZoom = true;
+      controls.target.set(0,0,0);
+      controls.update();
+
+      // Lights
+      scene.add(new THREE.AmbientLight(0xffffff,0.3));
+      let dir = new THREE.DirectionalLight(0xffffff,1);
+      dir.position.set(5,5,5);
+      scene.add(dir);
+
+      // Shader Uniforms
+      uniforms = {
+        time:            {value:0},
+        audioLevel:      {value:0},
+        deformation:     {value:parseFloat(sliders.deformation.value)},
+        maxDisp:         {value:parseFloat(sliders.maxDisp.value)},
+        lightingMode:    {value:parseInt(lightingModeSelect.value)},
+        colorFlowSpeed:  {value:parseFloat(sliders.colorFlowSpeed.value)},
+        colorFlowIntensity:{value:parseFloat(sliders.colorFlowIntensity.value)},
+        colorFlowScale:  {value:parseFloat(sliders.colorFlowScale.value)},
+        baseColor:       {value:new THREE.Color(parseInt(colorPresetSelect.value))},
+        lightDirection:  {value:new THREE.Vector3(0.577,0.577,0.577)},
+        lightColor:      {value:new THREE.Color(1,1,1)},
+        ambientColor:    {value:new THREE.Color(0.3,0.3,0.3)},
+        deformationMode: {value:parseInt(deformationModeSelect.value)},
+        physicsEngine:   {value:parseInt(physicsEngineSelect.value)},
+      };
+
+      // Initial geometry & mesh
+      let geom = createGeometry(shapeSelect.value);
+      let mat  = new THREE.ShaderMaterial({
+        uniforms: uniforms,
+        vertexShader:   document.getElementById('vertexShader').textContent,
+        fragmentShader: document.getElementById('fragmentShader').textContent
+      });
+      blob = new THREE.Mesh(geom, mat);
+      scene.add(blob);
+
+      // Event Listeners
+      window.addEventListener('resize', ()=> {
+        camera.aspect = window.innerWidth/window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth,window.innerHeight);
+      });
+      // Sliders
+      sliders.deformation .addEventListener('input',()=>uniforms.deformation.value=parseFloat(sliders.deformation.value));
+      sliders.maxDisp     .addEventListener('input',()=>uniforms.maxDisp.value=parseFloat(sliders.maxDisp.value));
+      sliders.colorFlowSpeed   .addEventListener('input',()=>uniforms.colorFlowSpeed.value=parseFloat(sliders.colorFlowSpeed.value));
+      sliders.colorFlowIntensity.addEventListener('input',()=>uniforms.colorFlowIntensity.value=parseFloat(sliders.colorFlowIntensity.value));
+      sliders.colorFlowScale.addEventListener('input',()=>uniforms.colorFlowScale.value=parseFloat(sliders.colorFlowScale.value));
+      lightingModeSelect .addEventListener('change',()=>uniforms.lightingMode.value=parseInt(lightingModeSelect.value));
+      colorPresetSelect  .addEventListener('change',()=>uniforms.baseColor.value.setHex(parseInt(colorPresetSelect.value)));
+      deformationModeSelect.addEventListener('change',()=>uniforms.deformationMode.value=parseInt(deformationModeSelect.value));
+      physicsEngineSelect.addEventListener('change',()=>uniforms.physicsEngine.value=parseInt(physicsEngineSelect.value));
+
+      shapeSelect.addEventListener('change', ()=>{
+        let newG = createGeometry(shapeSelect.value);
+        blob.geometry.dispose();
+        blob.geometry = newG;
+      });
+
+      recordButton.addEventListener('click', toggleRecording);
+      clickMeButton.addEventListener('click', ()=>{
+        jumpscareEnabled = !jumpscareEnabled;
+        clickMeButton.textContent = jumpscareEnabled ? 'Jumpscare ON' : 'Enable Jumpscare';
+      });
+    }
+
+    function createGeometry(shape) {
+      switch(shape) {
+        case 'cube':       return new THREE.BoxBufferGeometry(1.5,1.5,1.5, 64,64,64);
+        case 'torus':      return new THREE.TorusBufferGeometry(0.8,0.3,128,256);
+        case 'tetrahedron':return new THREE.TetrahedronBufferGeometry(1,0);
+        case 'dodecahedron':return new THREE.DodecahedronBufferGeometry(1,0);
+        case 'cone':       return new THREE.ConeBufferGeometry(1,2,64);
+        case 'cylinder':   return new THREE.CylinderBufferGeometry(1,1,2,64);
+        case 'octahedron': return new THREE.OctahedronBufferGeometry(1,0);
+        case 'icosahedron':return new THREE.IcosahedronBufferGeometry(1,0);
+        case 'ring':       return new THREE.RingBufferGeometry(0.5,1,128);
+        case 'torusKnot':  return new THREE.TorusKnotBufferGeometry(0.6,0.15,200,32);
+        case 'plane':      return new THREE.PlaneBufferGeometry(2,2,256,256);
+        case 'capsule':    return new THREE.CapsuleGeometry(0.7,0.6,8,16);
+        case 'star': {     // extruded star
+          let s = new THREE.Shape(), R=1, r=0.4, pts=5;
+          for(let i=0;i<pts*2;i++){
+            let a=i/(pts*2)*Math.PI*2, rad=(i%2? r:R);
+            let x=Math.cos(a)*rad, y=Math.sin(a)*rad;
+            i===0? s.moveTo(x,y): s.lineTo(x,y);
+          }
+          s.closePath();
+          return new THREE.ExtrudeBufferGeometry(s,{depth:0.5,bevelEnabled:true,bevelThickness:0.05,bevelSize:0.05,bevelSegments:2});
+        }
+        case 'pyramid':    return new THREE.ConeBufferGeometry(1,2,4);
+        case 'heart': {    // heart shape
+          let h = new THREE.Shape();
+          h.moveTo(0,0.8);
+          h.bezierCurveTo(0,1.1, -0.5,1.3, -0.6,0.6);
+          h.bezierCurveTo(-0.7,0.1,-0.2,-0.3,0,0);
+          h.bezierCurveTo(0.2,-0.3,0.7,0.1,0.6,0.6);
+          h.bezierCurveTo(0.5,1.3,0,1.1,0,0.8);
+          return new THREE.ExtrudeBufferGeometry(h,{depth:0.4,bevelEnabled:true,bevelSize:0.05,bevelThickness:0.05});
+        }
+        case 'tube': {     // circular path tube
+          let path = new THREE.Curve();
+          path.getPoint = t => {
+            let a = t*Math.PI*2;
+            return new THREE.Vector3(Math.cos(a)*1.2, Math.sin(a)*1.2, 0);
+          };
+          return new THREE.TubeBufferGeometry(path,100,0.2,32,false);
+        }
+        case 'polyhedron': // custom polyhedron
+          return new THREE.PolyhedronBufferGeometry(
+            [1,1,1, -1,1,-1, -1,-1,1, 1,-1,-1], // vertices
+            [0,1,2,  2,3,0,  1,3,2,  0,3,1],    // faces
+            1,0
+          );
+        case 'extrudeCross': { // cross extrude
+          let c = new THREE.Shape();
+          c.moveTo(-0.2,-1); c.lineTo(0.2,-1);
+          c.lineTo(0.2,-0.2); c.lineTo(1,-0.2);
+          c.lineTo(1,0.2); c.lineTo(0.2,0.2);
+          c.lineTo(0.2,1); c.lineTo(-0.2,1);
+          c.lineTo(-0.2,0.2); c.lineTo(-1,0.2);
+          c.lineTo(-1,-0.2); c.lineTo(-0.2,-0.2);
+          c.closePath();
+          return new THREE.ExtrudeBufferGeometry(c,{depth:0.3,bevelEnabled:true,bevelSize:0.05, bevelThickness:0.05});
+        }
+        case 'boxTessellated': return new THREE.BoxGeometry(1,1,1,10,10,10);
+        default: // sphere
+          return new THREE.SphereBufferGeometry(1,128,128);
+      }
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      uniforms.time.value    += 0.01;
+      controls.update();
+      uniforms.audioLevel.value = audioLevel;
+      renderer.render(scene, camera);
+
+      // Jumpscare
+      if (jumpscareEnabled && !jumpscareActive && audioLevel > 0.8) {
+        let ov = document.getElementById('jumpscareOverlay');
+        jumpscareActive = true;
+        ov.style.display = 'flex';
+        setTimeout(()=>{
+          ov.style.display = 'none';
+          jumpscareActive = false;
+        },1000);
+      }
+    }
+
+    function initAudio() {
+      navigator.mediaDevices.getUserMedia({audio:true})
+        .then(str=>{
+          audioStream = str;
+          let ctx = new (window.AudioContext||window.webkitAudioContext)();
+          let src = ctx.createMediaStreamSource(str);
+          analyser = ctx.createAnalyser();
+          analyser.fftSize = 512;
+          src.connect(analyser);
+          audioDataArray = new Uint8Array(analyser.frequencyBinCount);
+          updateAudio();
+        })
+        .catch(err=> console.error('Mic error:',err));
+    }
+
+    function updateAudio() {
+      requestAnimationFrame(updateAudio);
+      if (!analyser) return;
+      analyser.getByteFrequencyData(audioDataArray);
+      let sum=0;
+      for (let v of audioDataArray) sum+=v;
+      let avg = sum/audioDataArray.length;
+      audioLevel = (avg/255)*parseFloat(sliders.sensitivity.value);
+      volumeHistory.push(audioLevel);
+      if (volumeHistory.length>maxHistory) volumeHistory.shift();
+    }
+
+    function drawWaveform() {
+      waveformCtx.clearRect(0,0,200,100);
+      waveformCtx.fillStyle='rgba(0,0,0,0.5)';
+      waveformCtx.fillRect(0,0,200,100);
+      if (!audioDataArray) return;
+      waveformCtx.strokeStyle='#0f0'; waveformCtx.lineWidth=2;
+      waveformCtx.beginPath();
+      let sw=200/audioDataArray.length, x=0;
+      for(let i=0;i<audioDataArray.length;i++){
+        let v=audioDataArray[i]/255, y=v*100;
+        i===0? waveformCtx.moveTo(x,y) : waveformCtx.lineTo(x,y);
+        x+=sw;
+      }
+      waveformCtx.stroke();
+      let volPercent=((audioDataArray.reduce((a,v)=>a+v,0)/audioDataArray.length)/255*100).toFixed(1);
+      waveformCtx.fillStyle='#fff'; waveformCtx.font='12px sans-serif';
+      waveformCtx.fillText('Volume: '+volPercent+'%',10,15);
+    }
+    function drawVolumeHistory() {
+      volumeCtx.clearRect(0,0,200,100);
+      volumeCtx.fillStyle='rgba(0,0,0,0.5)';
+      volumeCtx.fillRect(0,0,200,100);
+      volumeCtx.strokeStyle='#fc0'; volumeCtx.lineWidth=2;
+      volumeCtx.beginPath();
+      let sw=200/maxHistory;
+      volumeHistory.forEach((v,i)=>{
+        let y=100-(v*100);
+        i===0? volumeCtx.moveTo(i*sw,y) : volumeCtx.lineTo(i*sw,y);
+      });
+      volumeCtx.stroke();
+      let cur=(volumeHistory[volumeHistory.length-1]||0)*100;
+      volumeCtx.fillStyle='#fff'; volumeCtx.font='12px sans-serif';
+      volumeCtx.fillText('Current: '+cur.toFixed(1)+'%',10,15);
+    }
+    function animateWaveform()   { drawWaveform();    requestAnimationFrame(animateWaveform); }
+    function animateVolumeHistory(){ drawVolumeHistory(); requestAnimationFrame(animateVolumeHistory); }
+
+    function toggleRecording() {
+      if (!recording) {
+        let canvasStream = renderer.domElement.captureStream(30);
+        if (audioStream) audioStream.getAudioTracks().forEach(t=>canvasStream.addTrack(t));
+        recordedChunks=[];
+        mediaRecorder = new MediaRecorder(canvasStream,{mimeType:'video/webm; codecs=vp8,opus'});
+        mediaRecorder.ondataavailable = e=>{ if(e.data.size>0) recordedChunks.push(e.data); };
+        mediaRecorder.onstop = ()=>{
+          let blob=new Blob(recordedChunks,{type:'video/webm'});
+          let url=URL.createObjectURL(blob);
+          let a=document.createElement('a');
+          a.style.display='block'; a.href=url; a.download='recording.webm';
+          a.textContent='Download Recording';
+          document.getElementById('menu').appendChild(a);
+        };
+        mediaRecorder.start();
+        recordButton.textContent='Stop Recording';
+      } else {
+        mediaRecorder.stop();
+        recordButton.textContent='Start Recording';
+      }
+      recording = !recording;
+    }
+  </script>
+</body>
+</html>
